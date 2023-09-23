@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const fs = require('fs').promises;
 const path = require('node:path');
+const Fuse = require('fuse.js');
+
+if (require('electron-squirrel-startup')) app.quit();
 
 app.whenReady().then(() => {
   createWindow();
@@ -67,4 +70,10 @@ function createWindow() {
     shell.openExternal(path);
   });
 
+  ipcMain.handle('search', (event, list, query) => {
+    let fuse = new Fuse(JSON.parse(list), {
+      keys: ["name"],
+    });
+    return fuse.search(query);
+  });
 }

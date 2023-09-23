@@ -10,7 +10,10 @@ contextBridge.exposeInMainWorld('files', {
   saveJSON,
 
   openFile
-})
+});
+contextBridge.exposeInMainWorld('search', {
+  fuzzy: search
+});
 
 async function getFiles (path) {
   try {
@@ -52,4 +55,9 @@ async function saveJSON(name, data) {
 async function openFile(path) {
   await ipcRenderer.invoke('open-file', path);
   return;
+}
+
+async function search(list, query) {
+  let res = await ipcRenderer.invoke('search', JSON.stringify(list), query);
+  return res;
 }

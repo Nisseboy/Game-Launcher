@@ -1,11 +1,14 @@
 const gamesListElem = document.getElementsByClassName("games-list")[0];
 const headerElem = document.getElementsByClassName("header")[0];
+const searchElem = document.getElementsByClassName("search")[0];
 
 let auth;
 let IGDBGames;
 
-const defaultSettings = {
+let searched = [];
 
+const defaultSettings = {
+  path: "",
 };
 
 let games = [];
@@ -16,18 +19,23 @@ let gamePaths;
 main();
 
 async function main() {
-  let dir = files.getFiles("C:/Users/AMD/Desktop");
   auth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
   settings = files.loadJSON("settings");
   alternateNames = files.loadJSON("alternate-names");
   gamePaths = files.loadJSON("gamepaths");
 
-  [dir, auth, settings, alternateNames, gamePaths] = await Promise.all([dir, auth, settings, alternateNames, gamePaths]);
+  [auth, settings, alternateNames, gamePaths] = await Promise.all([auth, settings, alternateNames, gamePaths]);
   auth = auth["access_token"];
 
   settings = settings.a != 123? settings : defaultSettings;
   alternateNames = alternateNames.a != 123? alternateNames : {};
   gamePaths = gamePaths.a != 123? gamePaths : [];
+
+  if (settings.path == "") {
+    
+    return;
+  }
+  let dir = await files.getFiles(settings.path);
 
   for (let i in dir) {
     let file = dir[i];
@@ -46,7 +54,6 @@ async function main() {
   }
 
   IGDBGames = await getGames();
-  console.table(IGDBGames);
 
   let createdGenres = {};
   IGDBGames.forEach((game, i) => {
@@ -63,6 +70,38 @@ async function main() {
 
   drawGameCards();
 }
+
+function resize() {
+  gamesListElem.style.setProperty("--columns", Math.floor(pixelsToRem(window.innerWidth) / 17));
+}
+window.addEventListener("resize", resize);
+resize();
+
+async function searchEvent(e) {
+  let res = await search.fuzzy(games, e.target.value);
+  searched = res.map((e, i) => {
+    return e.item.name;
+  });
+
+  searched.forEach((elem, i) => {
+    games.push(games.splice(games.findIndex(e=>e.name == elem), 1)[0]);
+  })
+
+  if (e.target.value == "") games.sort((a, b) => {
+    let x = a.name.toUpperCase();
+    let y = b.name.toUpperCase();
+    if (x > y) {
+      return 1;
+    }
+    if (x < y) {
+      return -1;
+    }
+    return 0;
+  });
+
+  drawGameCards();
+}
+searchElem.addEventListener("input", searchEvent);
 
 async function cardOptionClick(e) {
   let game = games.find(game=>game.name == e.dataset.old);
@@ -107,6 +146,7 @@ async function drawGameCard(game) {
   });
 
   if (!draw) return;
+  if (!searched.includes(game.name) && searchElem.value != "") return;
 
   game.elem = createElem(`
   <div class="game">
@@ -192,4 +232,8 @@ function createElem(text, parent = document.body) {
   parent.insertAdjacentHTML("beforeend", text);
 
   return parent.lastElementChild;
+}
+
+function pixelsToRem(pixels) {    
+  return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
 }
