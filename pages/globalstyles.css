@@ -1,0 +1,20 @@
+:root {
+  --bg: #111111;
+  --header-bg: #111111;
+  --game-bg: #3a3a3abb;
+  --play-bg: linear-gradient(to right, #50C82F, #18B14F);
+  --game-choice-bg: #ffffff11;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #aaa;
+  background-clip: content-box;
+  min-width: 10px;
+  min-height: 32px;
+}
+::-webkit-scrollbar-track {
+  background-color: #fff1;
+}
