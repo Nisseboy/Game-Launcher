@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('files', {
 contextBridge.exposeInMainWorld('search', {
   fuzzy: search
 });
+contextBridge.exposeInMainWorld('electron', {
+  openDevTools
+});
 
 async function getFiles (path) {
   try {
@@ -56,6 +59,9 @@ async function saveJSON(name, data) {
 async function openFile(path) {
   await ipcRenderer.invoke('open-file', path);
   return;
+}
+function openDevTools() {
+  ipcRenderer.invoke('open-dev-tools');
 }
 
 async function selectDirs() {

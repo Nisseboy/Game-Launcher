@@ -102,6 +102,10 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
+document.addEventListener("keydown", e => {
+  if (e.key == "F12") electron.openDevTools();
+});
+
 async function searchEvent(e) {
   let res = await search.fuzzy(games, e.target.value);
   searched = res.map((e, i) => {

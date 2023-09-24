@@ -83,6 +83,10 @@ function createWindow() {
     return result.filePaths;
   });
 
+  ipcMain.handle('open-dev-tools', (event) => {
+    window.webContents.openDevTools();
+  });
+
   ipcMain.handle('search', (event, list, query) => {
     let fuse = new Fuse(JSON.parse(list), {
       keys: ["name"],
