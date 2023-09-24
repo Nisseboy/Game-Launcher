@@ -129,7 +129,7 @@ body {
   opacity: 1;
 }
 .game-overlay > .name {
-  width: 85%;
+  width: 75%;
 }
 .game-overlay > button {
   padding: 0.35rem 4rem;
@@ -149,12 +149,14 @@ body {
   overflow-y: auto;
 }
 .game-overlay .swap-game,
-.game-overlay .open-link {
+.game-overlay .open-link,
+.game-overlay .remove-game {
   position: absolute;
-  top: 0;
   font-size: 1.2rem;
+  top: 0;
   margin: 1rem 0.5rem;
   color: white;
+  cursor: pointer;
 }
 .game-overlay .open-link {
   right: 0;
@@ -162,7 +164,14 @@ body {
 }
 .game-overlay .swap-game {
   left: 0;
-  cursor: pointer;
+}
+.game-overlay .remove-game {
+  left: 0;
+  margin: 1rem 2rem;
+  transition-duration: 0.2s;
+}
+.game-overlay .remove-game:hover {
+  color: var(--warning-bg);
 }
 
 .possible-games {

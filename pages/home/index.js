@@ -15,21 +15,21 @@ const defaultSettings = {
 let games = [];
 let settings;
 let alternateNames;
-let gamePaths;
+let removedGames;
 
 start();
 async function start() {
   auth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
   settings = files.loadJSON("settings");
   alternateNames = files.loadJSON("alternate-names");
-  gamePaths = files.loadJSON("gamepaths");
+  removedGames = files.loadJSON("removed-games");
   
-  [auth, settings, alternateNames, gamePaths] = await Promise.all([auth, settings, alternateNames, gamePaths]);
+  [auth, settings, alternateNames, removedGames] = await Promise.all([auth, settings, alternateNames, removedGames]);
   auth = auth["access_token"];
   
   settings = settings.a != 123? settings : defaultSettings;
   alternateNames = alternateNames.a != 123? alternateNames : {};
-  gamePaths = gamePaths.a != 123? gamePaths : [];
+  removedGames = removedGames.a != 123? removedGames : [];
 
   main();
 }
@@ -68,6 +68,8 @@ async function main() {
     if (ending != ".lnk" && ending != ".url") continue;
 
     name = name.join("");
+
+    if (removedGames.includes(name)) continue;
 
     let elem = createElem(`
     <div class="game">
@@ -140,7 +142,9 @@ async function cardOptionClick(e) {
   alternateNames[game.originalName] = e.dataset.new;
   files.saveJSON("alternate-names", alternateNames);
 
-  drawGameCards();
+  game.elem.remove();
+
+  drawGameCard(game);
 }
 async function openApp(e) {
   files.openFile(e.dataset.path);
@@ -149,6 +153,15 @@ async function openApp(e) {
 function toggleGenre(elem) {
   elem.classList.toggle("active");
   drawGameCards();
+}
+
+function removeGame(e) {
+  let game = games.find(game=>game.name == e.dataset.game);
+  games.splice(games.indexOf(game), 1);
+  game.elem.remove();
+
+  removedGames.push(game.originalName);
+  files.saveJSON("removed-games", removedGames);
 }
 
 async function drawGameCards() {
@@ -188,11 +201,13 @@ async function drawGameCard(game) {
       <button class="play" onclick="openApp(this)" data-path="${game.path}">PLAY</button>
       <a class="material-symbols-outlined open-link" href="${gameInfo.url}" target="_blank">open_in_new</a>
       <span class="material-symbols-outlined swap-game">swap_horiz</span>
+      <span class="material-symbols-outlined remove-game" onclick="removeGame(this)" data-game="${game.name}">close</span>
     </div>
     `, game.elem);
 
     elem.getElementsByClassName("swap-game")[0].addEventListener("click", e => {
       game.swap = true;
+      game.name = game.originalName;
       drawGameCards();
     });
   } else {
@@ -218,6 +233,7 @@ async function drawGameCard(game) {
         }).join("")
       }</div>
       <button class="play">PLAY</button>
+      <span class="material-symbols-outlined remove-game" onclick="removeGame(this)" data-game="${game.name}">close</span>
     </div>
     `, game.elem);
   }
