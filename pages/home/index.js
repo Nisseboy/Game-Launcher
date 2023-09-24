@@ -1,6 +1,7 @@
 const gamesListElem = document.getElementsByClassName("games-list")[0];
 const headerElem = document.getElementsByClassName("header")[0];
 const searchElem = document.getElementsByClassName("search")[0];
+const resultsElem = document.getElementsByClassName("number-of-results")[0];
 
 let auth;
 let IGDBGames;
@@ -76,8 +77,6 @@ async function main() {
     games.push({name: alternateNames[name] || name, elem: elem, path: "C:/Users/AMD/Desktop/" + file});
   }
 
-  console.log(games.length);
-
   IGDBGames = await getGames();
 
   let createdGenres = {};
@@ -92,7 +91,6 @@ async function main() {
       `, headerElem);
     });
   });
-
   drawGameCards();
 }
 
@@ -158,6 +156,7 @@ async function drawGameCards() {
   games.forEach((game, i) => {
     drawGameCard(game);
   });
+  resultsElem.innerText = `Showing ${gamesListElem.children.length}/${games.length} Results`;
 }
 
 async function drawGameCard(game) {
@@ -185,7 +184,9 @@ async function drawGameCard(game) {
       <div class="genre-list">
         ${gameInfo.genres?.map(e=>{return `<div>${e.name}</div>`}).join("")}
       </div>
+      <div class="desc">${gameInfo.summary}</div>
       <button class="play" onclick="openApp(this)" data-path="${game.path}">PLAY</button>
+      <a class="material-symbols-outlined open-link" href="${gameInfo.url}" target="_blank">open_in_new</a>
     </div>
     `, game.elem);
   } else {

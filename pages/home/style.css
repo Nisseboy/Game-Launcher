@@ -53,12 +53,13 @@ body {
   border: 1px solid gray;
   background: none;
   border-radius: 0.3rem;
-  color: white;
+  color: gray;
   cursor: pointer;
   transition-duration: 0.2s;
 }
 .reset-path:hover {
   background: var(--warning-bg);
+  color: white;
 }
 .search {
   border: 1px solid gray;
@@ -69,6 +70,11 @@ body {
   outline: none;
   color: white;
   padding: 0 0.5rem;
+}
+.number-of-results {
+  position: fixed;
+  right: 0.5rem;
+  color: gray;
 }
 
 .genre-list {
@@ -122,6 +128,9 @@ body {
 .game:not(:has(>img)) > .game-overlay {
   opacity: 1;
 }
+.game-overlay > .name {
+  width: 90%;
+}
 .game-overlay > button {
   padding: 0.35rem 4rem;
   border: none;
@@ -136,7 +145,18 @@ body {
 .game-overlay > button:hover {
   filter: brightness(1.2);
 }
-
+.desc {
+  overflow-y: auto;
+}
+.game-overlay .open-link {
+  position: absolute;
+  top: 0;
+  font-size: 1.2rem;
+  right: 0;
+  margin: 1rem 0.5rem;
+  text-decoration: none;
+  color: white;
+}
 
 .possible-games {
   display: grid;

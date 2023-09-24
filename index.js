@@ -39,7 +39,7 @@ function createWindow() {
   window.removeMenu();
   
   window.loadFile("pages/home/index.html");
-  //window.webContents.openDevTools()
+//  window.webContents.openDevTools()
 
   ipcMain.handle('read-directory', async (event, directoryPath) => {
     try {
@@ -88,6 +88,11 @@ function createWindow() {
       keys: ["name"],
     });
     return fuse.search(query);
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 }
 
