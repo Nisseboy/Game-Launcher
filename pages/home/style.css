@@ -129,7 +129,7 @@ body {
   opacity: 1;
 }
 .game-overlay > .name {
-  width: 90%;
+  width: 85%;
 }
 .game-overlay > button {
   padding: 0.35rem 4rem;
@@ -148,14 +148,21 @@ body {
 .desc {
   overflow-y: auto;
 }
+.game-overlay .swap-game,
 .game-overlay .open-link {
   position: absolute;
   top: 0;
   font-size: 1.2rem;
-  right: 0;
   margin: 1rem 0.5rem;
-  text-decoration: none;
   color: white;
+}
+.game-overlay .open-link {
+  right: 0;
+  text-decoration: none;
+}
+.game-overlay .swap-game {
+  left: 0;
+  cursor: pointer;
 }
 
 .possible-games {

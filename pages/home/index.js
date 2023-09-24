@@ -74,7 +74,7 @@ async function main() {
     </div>
     `, gamesListElem);
 
-    games.push({name: alternateNames[name] || name, elem: elem, path: "C:/Users/AMD/Desktop/" + file});
+    games.push({name: alternateNames[name] || name, elem: elem, originalName: name, path: "C:/Users/AMD/Desktop/" + file});
   }
 
   IGDBGames = await getGames();
@@ -137,10 +137,10 @@ async function cardOptionClick(e) {
   `);
   IGDBGames.push(res[0]);
 
-  alternateNames[e.dataset.old] = e.dataset.new;
+  alternateNames[game.originalName] = e.dataset.new;
   files.saveJSON("alternate-names", alternateNames);
 
-  drawGameCard(game);
+  drawGameCards();
 }
 async function openApp(e) {
   files.openFile(e.dataset.path);
@@ -176,8 +176,8 @@ async function drawGameCard(game) {
   </div>
   `, gamesListElem);
 
-  if (gameInfo != undefined) {
-    createElem(`
+  if (gameInfo != undefined && !game.swap) {
+    let elem = createElem(`
     <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/${gameInfo.cover["image_id"]}.png">
     <div class="game-overlay">
       <div class="name">${game.name}</div>
@@ -187,9 +187,17 @@ async function drawGameCard(game) {
       <div class="desc">${gameInfo.summary}</div>
       <button class="play" onclick="openApp(this)" data-path="${game.path}">PLAY</button>
       <a class="material-symbols-outlined open-link" href="${gameInfo.url}" target="_blank">open_in_new</a>
+      <span class="material-symbols-outlined swap-game">swap_horiz</span>
     </div>
     `, game.elem);
+
+    elem.getElementsByClassName("swap-game")[0].addEventListener("click", e => {
+      game.swap = true;
+      drawGameCards();
+    });
   } else {
+    game.swap = false;
+
     let possibleGames = await IGDBreq("games", "POST", `
       search "${game.name}";
       fields id,name,cover.image_id;
