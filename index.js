@@ -22,6 +22,7 @@ function createWindow() {
   let window = new BrowserWindow({
     width: 800,
     height: 800,
+    title: "Nolshub",
     titleBarStyle: 'hidden',
     titleBarOverlay: {
         color: '#ffffff03',
@@ -130,13 +131,13 @@ function handleSquirrelEvent() {
   switch (squirrelEvent) {
     case '--squirrel-install':
     case '--squirrel-updated':
-      spawnUpdate(['--createShortcut', exeName]);
+      spawnUpdate(['--createShortcut', "Nolshub.exe"]);
 
       setTimeout(app.quit, 1000);
       return true;
 
     case '--squirrel-uninstall':
-      spawnUpdate(['--removeShortcut', exeName]);
+      spawnUpdate(['--removeShortcut', "Nolshub.exe"]);
 
       setTimeout(app.quit, 1000);
       return true;
