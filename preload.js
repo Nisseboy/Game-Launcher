@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('files', {
   writeFile,
   loadJSON,
   saveJSON,
+  selectDirs,
 
   openFile
 });
@@ -55,6 +56,11 @@ async function saveJSON(name, data) {
 async function openFile(path) {
   await ipcRenderer.invoke('open-file', path);
   return;
+}
+
+async function selectDirs() {
+  let res = await ipcRenderer.invoke('select-dirs');
+  return res;
 }
 
 async function search(list, query) {

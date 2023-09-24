@@ -47,6 +47,19 @@ body {
   place-items: center;
   z-index: 100;
 }
+.reset-path {
+  position: fixed;
+  left: 0.5rem;
+  border: 1px solid gray;
+  background: none;
+  border-radius: 0.3rem;
+  color: white;
+  cursor: pointer;
+  transition-duration: 0.2s;
+}
+.reset-path:hover {
+  background: var(--warning-bg);
+}
 .search {
   border: 1px solid gray;
   border-radius: 0.5rem;
@@ -153,4 +166,22 @@ body {
 }
 .possible-game > img {
   width: 100%;
+}
+
+.center-box {
+  color: white;
+  display: grid;
+  place-items: center;
+  inset: 0;
+  position: absolute;
+  align-content: center;
+  gap: 0.5rem;
+}
+.center-box > button {
+  background: none;
+  border: 1px solid gray;
+  color: white;
+  border-radius: 0.3rem;
+  padding: 0.1rem 3rem;
+  cursor: pointer;
 }

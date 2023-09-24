@@ -16,26 +16,49 @@ let settings;
 let alternateNames;
 let gamePaths;
 
-main();
-
-async function main() {
+start();
+async function start() {
   auth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
   settings = files.loadJSON("settings");
   alternateNames = files.loadJSON("alternate-names");
   gamePaths = files.loadJSON("gamepaths");
-
+  
   [auth, settings, alternateNames, gamePaths] = await Promise.all([auth, settings, alternateNames, gamePaths]);
   auth = auth["access_token"];
-
+  
   settings = settings.a != 123? settings : defaultSettings;
   alternateNames = alternateNames.a != 123? alternateNames : {};
   gamePaths = gamePaths.a != 123? gamePaths : [];
 
-  if (settings.path == "") {
-    
+  main();
+}
+
+async function main() {
+  gamesListElem.replaceChildren();
+  headerElem.replaceChildren();
+  games = [];
+
+  let dir;
+  try {
+    dir = await files.getFiles(settings.path);
+  } catch {
+    let elem = createElem(`
+    <div class="center-box">
+      You need to select a folder with all your games as shortcuts inside. Do not use your steamlibrary as it contains folders with exes instead of just shortcuts, I suggest the desktop.
+      <button>Select Folder</button>
+    </div>
+    `, gamesListElem);
+
+    elem.getElementsByTagName("button")[0].addEventListener("click", async e => {
+      let res = await files.selectDirs();
+      settings.path = res[0];
+      files.saveJSON("settings", settings);
+      gamesListElem.replaceChildren();
+      main();
+    });
+
     return;
   }
-  let dir = await files.getFiles(settings.path);
 
   for (let i in dir) {
     let file = dir[i];
@@ -52,6 +75,8 @@ async function main() {
 
     games.push({name: alternateNames[name] || name, elem: elem, path: "C:/Users/AMD/Desktop/" + file});
   }
+
+  console.log(games.length);
 
   IGDBGames = await getGames();
 
@@ -129,6 +154,7 @@ function toggleGenre(elem) {
 }
 
 async function drawGameCards() {
+  gamesListElem.replaceChildren();
   games.forEach((game, i) => {
     drawGameCard(game);
   });
@@ -136,8 +162,6 @@ async function drawGameCards() {
 
 async function drawGameCard(game) {
   let gameInfo = IGDBGames.find(e=>e.name==game.name);
-
-  game.elem?.remove();
 
   let activeGenres = Array.from(document.getElementsByClassName("genre-button")).filter(elem=>elem.classList.contains("active")).map(elem=>elem.innerText);
   let draw = activeGenres.length == 0 ;
@@ -236,4 +260,9 @@ function createElem(text, parent = document.body) {
 
 function pixelsToRem(pixels) {    
   return pixels / parseFloat(getComputedStyle(document.documentElement).fontSize);
+}
+
+function resetPath() {
+  settings.path = "";
+  main();
 }

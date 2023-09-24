@@ -1,9 +1,14 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const fs = require('fs').promises;
 const path = require('node:path');
 const Fuse = require('fuse.js');
 
-if (require('electron-squirrel-startup')) app.quit();
+if (handleSquirrelEvent()) {
+  return;
+}
+
+//if (require('electron-squirrel-startup')) app.quit();
+
 
 app.whenReady().then(() => {
   createWindow();
@@ -33,7 +38,7 @@ function createWindow() {
   window.removeMenu();
   
   window.loadFile("pages/home/index.html");
-  window.webContents.openDevTools()
+  //window.webContents.openDevTools()
 
   ipcMain.handle('read-directory', async (event, directoryPath) => {
     try {
@@ -70,6 +75,13 @@ function createWindow() {
     shell.openExternal(path);
   });
 
+  ipcMain.handle('select-dirs', async (event) => {
+    const result = await dialog.showOpenDialog(window, {
+      properties: ['openDirectory']
+    });
+    return result.filePaths;
+  });
+
   ipcMain.handle('search', (event, list, query) => {
     let fuse = new Fuse(JSON.parse(list), {
       keys: ["name"],
@@ -77,3 +89,60 @@ function createWindow() {
     return fuse.search(query);
   });
 }
+
+
+
+
+
+
+
+
+
+
+function handleSquirrelEvent() {
+  if (process.argv.length === 1) {
+    return false;
+  }
+
+  const ChildProcess = require('child_process');
+  const path = require('path');
+
+  const appFolder = path.resolve(process.execPath, '..');
+  const rootAtomFolder = path.resolve(appFolder, '..');
+  const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
+  const exeName = path.basename(process.execPath);
+
+  const spawn = function(command, args) {
+    let spawnedProcess, error;
+
+    try {
+      spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
+    } catch (error) {}
+
+    return spawnedProcess;
+  };
+
+  const spawnUpdate = function(args) {
+    return spawn(updateDotExe, args);
+  };
+
+  const squirrelEvent = process.argv[1];
+  switch (squirrelEvent) {
+    case '--squirrel-install':
+    case '--squirrel-updated':
+      spawnUpdate(['--createShortcut', exeName]);
+
+      setTimeout(app.quit, 1000);
+      return true;
+
+    case '--squirrel-uninstall':
+      spawnUpdate(['--removeShortcut', exeName]);
+
+      setTimeout(app.quit, 1000);
+      return true;
+
+    case '--squirrel-obsolete':
+      app.quit();
+      return true;
+  }
+};
