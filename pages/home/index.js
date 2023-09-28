@@ -13,24 +13,28 @@ const defaultSettings = {
 };
 
 let games = [];
+
 let settings;
-let alternateNames;
 let removedGames;
+let ids;
+let favorites;
 
 start();
 async function start() {
   auth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
   settings = files.loadJSON("settings");
-  alternateNames = files.loadJSON("alternate-names");
   removedGames = files.loadJSON("removed-games");
+  ids = files.loadJSON("ids");
+  favorites = files.loadJSON("favorites");
   
-  [auth, settings, alternateNames, removedGames] = await Promise.all([auth, settings, alternateNames, removedGames]);
+  [auth, settings, removedGames, ids, favorites] = await Promise.all([auth, settings, removedGames, ids, favorites]);
   auth = auth["access_token"];
   
   settings = settings.a != 123? settings : defaultSettings;
-  alternateNames = alternateNames.a != 123? alternateNames : {};
   removedGames = removedGames.a != 123? removedGames : [];
-
+  ids = ids.a != 123? ids : {};
+  favorites = favorites.a != 123? favorites : [];
+  
   main();
 }
 
@@ -61,27 +65,19 @@ async function main() {
     return;
   }
 
-  for (let i in dir) {
-    let file = dir[i];
-    let name = dir[i].split("");
-    let ending = name.splice(-4).join("");
-    if (ending != ".lnk" && ending != ".url") continue;
-
-    name = name.join("");
-
-    if (removedGames.includes(name)) continue;
-
-    let elem = createElem(`
-    <div class="game">
-    </div>
-    `, gamesListElem);
-
-    games.push({name: alternateNames[name] || name, elem: elem, originalName: name, path: "C:/Users/AMD/Desktop/" + file});
-  }
+  await readGames(dir);
+  
+  let neededIDs = games.filter(e=>e.id == undefined);
+  if (neededIDs.length > 0)
+    await getIDs(neededIDs);
 
   IGDBGames = await getGames();
 
   let createdGenres = {};
+  createElem(`
+  <button class="genre-button" onclick="toggleGenre(this)">Removed</button>
+  <button class="genre-button last-specific" onclick="toggleGenre(this)">Favorites</button>
+  `, headerElem);
   IGDBGames.forEach((game, i) => {
     if (!game.genres) return;
     game.genres.forEach((genre) => {
@@ -94,6 +90,30 @@ async function main() {
     });
   });
   drawGameCards();
+}
+
+async function readGames(dir) {
+  games = [];
+  for (let i in dir) {
+    let file = dir[i];
+    let name = dir[i].split("");
+    let ending = name.splice(-4).join("");
+    if (ending != ".lnk" && ending != ".url") continue;
+
+    name = name.join("");
+
+    let elem = createElem(`
+    <div class="game">
+    </div>
+    `, gamesListElem);
+
+    let id;
+    if (ids[name]) {
+      id = parseInt(ids[name]);
+    }
+
+    games.push({id, elem, name, path: settings.path + "\\" + file});
+  }
 }
 
 function resize() {
@@ -134,19 +154,19 @@ searchElem.addEventListener("input", searchEvent);
 
 async function cardOptionClick(e) {
   let game = games.find(game=>game.name == e.dataset.old);
-  game.name = e.dataset.new;
+  game.id = e.dataset.new;
+  becomeSpinner(game.elem);
 
   res = await IGDBreq("games", "POST", `
-    fields id,cover.image_id,genres.name,name,summary,url,videos.video_id;
-    where name = "${game.name}";
+    fields id,cover.image_id,genres.name,name,summary,url,videos.video_id,first_release_date;
+    where id = ${game.id};
     limit 1;
   `);
   IGDBGames.push(res[0]);
+  ids[game.name] = e.dataset.new;
+  files.saveJSON("ids", ids);
 
-  alternateNames[game.originalName] = e.dataset.new;
-  files.saveJSON("alternate-names", alternateNames);
-
-  game.elem.remove();
+  decomeSpinner(game.elem);
 
   drawGameCard(game);
 }
@@ -160,12 +180,30 @@ function toggleGenre(elem) {
 }
 
 function removeGame(e) {
-  let game = games.find(game=>game.name == e.dataset.game);
-  games.splice(games.indexOf(game), 1);
+  let index = findInDisarray(removedGames, e.dataset.gameid, e.dataset.gamename, false);
+  let game = games[findInDisarray(games, e.dataset.gameid, e.dataset.gamename)];
   game.elem.remove();
+  if (index != -1) {
+    removedGames.splice(index, 1);
+  } else {
+    removedGames.push(game.id || game.name);
+  }
 
-  removedGames.push(game.originalName);
   files.saveJSON("removed-games", removedGames);
+}
+
+function favorite(e) {
+  let index = findInDisarray(favorites, e.dataset.gameid, e.dataset.gamename, false);
+  let game = games[findInDisarray(games, e.dataset.gameid, e.dataset.gamename)];
+  
+  e.classList.toggle("filled", index == -1);
+  if (index != -1) {
+    favorites.splice(index, 1);
+  } else {
+    favorites.push(game.id || game.name);
+  }
+
+  files.saveJSON("favorites", favorites);
 }
 
 async function drawGameCards() {
@@ -177,70 +215,108 @@ async function drawGameCards() {
 }
 
 async function drawGameCard(game) {
-  let gameInfo = IGDBGames.find(e=>e.name==game.name);
+  let gameInfo = IGDBGames.find(e=>e.id==game.id);
 
   let activeGenres = Array.from(document.getElementsByClassName("genre-button")).filter(elem=>elem.classList.contains("active")).map(elem=>elem.innerText);
-  let draw = activeGenres.length == 0 ;
+
+  let drawRemoved = activeGenres.includes("Removed");
+  let isRemoved = drawRemoved != (removedGames.includes(game.id) || removedGames.includes(game.name));
+  let drawFavorites = activeGenres.includes("Favorites");
+  let isFavorite = (favorites.includes(game.id) || favorites.includes(game.name));
+
+  let draw = activeGenres.length == 0 + drawRemoved + drawFavorites;
+
   gameInfo?.genres?.forEach(elem => {
     if (activeGenres.includes(elem.name)) draw = true;
   });
 
+  if (isRemoved) draw = false;
+  if (drawFavorites && !isFavorite) draw = false;
+  
   if (!draw) return;
   if (!searched.includes(game.name) && searchElem.value != "") return;
 
-  game.elem = createElem(`
-  <div class="game">
-  </div>
-  `, gamesListElem);
+  let data = (gameInfo != undefined) ? `data-gameid="${game.id}"` : `data-gamename="${game.name}"`;
+  let removeButton = (isRemoved != drawRemoved) ? `
+  <span class="material-symbols-outlined restore-game" onclick="removeGame(this)" ${data}>check</span>
+  ` : `
+  <span class="material-symbols-outlined remove-game" onclick="removeGame(this)" ${data}>close</span>
+  `;
 
-  if (gameInfo != undefined && !game.swap) {
+  let playButton = `
+  <button class="play" onclick="openApp(this)" data-path="${game.path}">PLAY</button>
+  `;
+
+  let favoriteButton = `
+  <span class="material-symbols-outlined favorite${isFavorite?" filled" : ""}" onclick="favorite(this)" ${data}>favorite</span>
+  `;
+
+  if (game.elem.parentNode == null) {
+    game.elem = createElem(`
+    <div class="game">
+    </div>
+    `, gamesListElem);
+  } else {
+    let old = game.elem;
+    game.elem = document.createElement("div");
+    game.elem.className = "game";
+    old.replaceWith(game.elem);
+  }
+
+  if (gameInfo != undefined) {
+    let date = new Date(gameInfo["first_release_date"] * 1000);
     let elem = createElem(`
     <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/${gameInfo.cover["image_id"]}.png">
     <div class="game-overlay">
       <div class="name">${game.name}</div>
+      <div class="date">${`${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][date.getMonth()]} ${date.getFullYear()}`}</div>
       <div class="genre-list">
         ${gameInfo.genres?.map(e=>{return `<div>${e.name}</div>`}).join("")}
       </div>
       <div class="desc">${gameInfo.summary}</div>
-      <button class="play" onclick="openApp(this)" data-path="${game.path}">PLAY</button>
+      ${playButton}
       <a class="material-symbols-outlined open-link" href="${gameInfo.url}" target="_blank">open_in_new</a>
       <span class="material-symbols-outlined swap-game">swap_horiz</span>
-      <span class="material-symbols-outlined remove-game" onclick="removeGame(this)" data-game="${game.name}">close</span>
+      ${removeButton}
+      ${favoriteButton}
     </div>
     `, game.elem);
 
-    elem.getElementsByClassName("swap-game")[0].addEventListener("click", e => {
-      game.swap = true;
-      game.name = game.originalName;
-      drawGameCards();
+    elem.getElementsByClassName("swap-game")[0].addEventListener("click", async e => {
+      game.id = undefined;
+      await drawGameCard(game);
     });
   } else {
-    game.swap = false;
-
+    becomeSpinner(game.elem);
     let possibleGames = await IGDBreq("games", "POST", `
       search "${game.name}";
       fields id,name,cover.image_id;
       limit 8;
     `);
+    decomeSpinner(game.elem);
     
     createElem(`
     <div class="game-overlay">
       <div class="name">${game.name}</div>
+      <div class="which-version">Which version do you have?</div>
       <div class="possible-games">${
         possibleGames.map(e=>{
           return `
-            <div class="possible-game" onclick="cardOptionClick(this)" data-new="${e.name}" data-old="${game.name}">
+            <div class="possible-game" onclick="cardOptionClick(this)" data-new="${e.id}" data-old="${game.name}">
               ${e.cover?`<img src="https://images.igdb.com/igdb/image/upload/t_thumb/${e.cover["image_id"]}.png"></img>`:"<div></div>"}
               ${e.name}
             </div>
           `;
         }).join("")
       }</div>
-      <button class="play">PLAY</button>
-      <span class="material-symbols-outlined remove-game" onclick="removeGame(this)" data-game="${game.name}">close</span>
+      ${playButton}
+      ${removeButton}
+      ${favoriteButton}
     </div>
     `, game.elem);
   }
+
+  return game.elem;
 }
 
 let IGDBReqQueue = [];
@@ -274,17 +350,31 @@ async function req(url, type = "GET", body = "", headers = []) {
 async function getGames() {
   return await IGDBreq("games", "POST", `
     sort id asc;
-    fields id,cover.image_id,genres.name,name,summary,url,videos.video_id;
+    fields id,cover.image_id,genres.name,name,summary,url,videos.video_id,first_release_date;
+    where ${games.filter(e=>e.id).map((e, i) => `${i!=0?" | ":""}id = ${e.id}`).join("")};
+    limit ${games.length};
+  `);
+}
+async function getIDs(games) {
+  let res = await IGDBreq("games", "POST", `
+    sort id asc;
+    fields id,name;
     where ${games.map((e, i) => `${i!=0?" | ":""}name = "${e.name}"`).join("")};
     limit ${games.length + 50};
   `);
-}
 
+  games.forEach(e=>{
+    e.id = res.find(ee=>e.name == ee.name)?.id;
+    ids[e.name] = e.id;
+  });
+  files.saveJSON("ids", ids);
+}
 
 function createElem(text, parent = document.body) {
   parent.insertAdjacentHTML("beforeend", text);
-
-  return parent.lastElementChild;
+  let elem = parent.lastElementChild;
+  if (parent == document.body) elem.remove();
+  return elem;
 }
 
 function pixelsToRem(pixels) {    
@@ -294,4 +384,19 @@ function pixelsToRem(pixels) {
 function resetPath() {
   settings.path = "";
   main();
+}
+
+function findInDisarray(arr, id, name, deeper = true) {
+  let index = arr.findIndex(_id=>((deeper)?_id.id:_id)==id)
+  if (index == -1) index = arr.findIndex(_name=>((deeper)?_name.name:_name)==name);
+  return index;
+}
+
+function becomeSpinner(elem) {
+  elem.replaceChildren(document.createElement("div"), document.createElement("div"));
+  elem.classList.add("loading");
+}
+function decomeSpinner(elem) {
+  elem.replaceChildren();
+  elem.classList.remove("loading");
 }

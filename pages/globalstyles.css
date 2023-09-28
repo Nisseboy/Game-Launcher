@@ -5,6 +5,7 @@
   --play-bg: linear-gradient(to right, #50C82F, #18B14F);
   --game-choice-bg: #ffffff11;
   --warning-bg: #cc1111;
+  --check-bg: #11cc11;
 }
 
 ::-webkit-scrollbar {
