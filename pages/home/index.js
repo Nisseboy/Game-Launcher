@@ -31,9 +31,9 @@ async function start() {
   auth = auth["access_token"];
   
   settings = settings.a != 123? settings : defaultSettings;
-  removedGames = removedGames.a != 123? removedGames : [];
+  removedGames = (removedGames.a != 123 && removedGames.v == 1)? removedGames : {v: 1, games: []};
   ids = ids.a != 123? ids : {};
-  favorites = favorites.a != 123? favorites : [];
+  favorites = (favorites.a != 123 && favorites.v == 1)? favorites : {v: 1, games: []};
   
   main();
 }
@@ -180,27 +180,28 @@ function toggleGenre(elem) {
 }
 
 function removeGame(e) {
-  let index = findInDisarray(removedGames, e.dataset.gameid, e.dataset.gamename, false);
-  let game = games[findInDisarray(games, e.dataset.gameid, e.dataset.gamename)];
+  let index = removedGames.games.findIndex(game=>game == e.dataset.path);
+  let game = games.find(game=>game.path == e.dataset.path);
   game.elem.remove();
   if (index != -1) {
-    removedGames.splice(index, 1);
+    removedGames.games.splice(index, 1);
   } else {
-    removedGames.push(game.id || game.name);
+    removedGames.games.push(game.path);
   }
 
   files.saveJSON("removed-games", removedGames);
 }
 
-function favorite(e) {
-  let index = findInDisarray(favorites, e.dataset.gameid, e.dataset.gamename, false);
-  let game = games[findInDisarray(games, e.dataset.gameid, e.dataset.gamename)];
+function favorite(e, drawFavorites = false) {
+  let index = favorites.games.findIndex(game=>game == e.dataset.path);
+  let game = games.find(game=>game.path == e.dataset.path);
   
   e.classList.toggle("filled", index == -1);
   if (index != -1) {
-    favorites.splice(index, 1);
+    favorites.games.splice(index, 1);
+    if (drawFavorites) game.elem?.remove();
   } else {
-    favorites.push(game.id || game.name);
+    favorites.games.push(game.path);
   }
 
   files.saveJSON("favorites", favorites);
@@ -220,9 +221,9 @@ async function drawGameCard(game) {
   let activeGenres = Array.from(document.getElementsByClassName("genre-button")).filter(elem=>elem.classList.contains("active")).map(elem=>elem.innerText);
 
   let drawRemoved = activeGenres.includes("Removed");
-  let isRemoved = drawRemoved != (removedGames.includes(game.id) || removedGames.includes(game.name));
+  let isRemoved = drawRemoved != removedGames.games.includes(game.path);
   let drawFavorites = activeGenres.includes("Favorites");
-  let isFavorite = (favorites.includes(game.id) || favorites.includes(game.name));
+  let isFavorite = favorites.games.includes(game.path);
 
   let draw = activeGenres.length == 0 + drawRemoved + drawFavorites;
 
@@ -236,7 +237,7 @@ async function drawGameCard(game) {
   if (!draw) return;
   if (!searched.includes(game.name) && searchElem.value != "") return;
 
-  let data = (gameInfo != undefined) ? `data-gameid="${game.id}"` : `data-gamename="${game.name}"`;
+  let data = `data-path="${game.path}"`;
   let removeButton = (isRemoved != drawRemoved) ? `
   <span class="material-symbols-outlined restore-game" onclick="removeGame(this)" ${data}>check</span>
   ` : `
@@ -248,7 +249,7 @@ async function drawGameCard(game) {
   `;
 
   let favoriteButton = `
-  <span class="material-symbols-outlined favorite${isFavorite?" filled" : ""}" onclick="favorite(this)" ${data}>favorite</span>
+  <span class="material-symbols-outlined favorite${isFavorite?" filled" : ""}" onclick="favorite(this, ${drawFavorites})" ${data}>favorite</span>
   `;
 
   if (game.elem.parentNode == null) {
@@ -323,15 +324,26 @@ let IGDBReqQueue = [];
 let IGDBNextReq = new Date().getTime();
 async function IGDBreq(url, type = "GET", body = "") {
   return new Promise((resolve, reject) => {
+    IGDBReqQueue.push(body);
+
     let time = new Date().getTime();
     
     setTimeout(async () => {
+      if (!IGDBReqQueue.includes(body)) {
+        reject();
+        return;
+      }
+      IGDBReqQueue.splice(IGDBReqQueue.indexOf(body), 1);
       let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + auth});
       resolve(res);
     }, Math.max(IGDBNextReq - time, 0));
 
     IGDBNextReq = Math.max(IGDBNextReq + 250, time);
   });
+}
+function resetIGDB() {
+  IGDBReqQueue = [];
+  IGDBNextReq = new Date().getTime();
 }
 
 async function req(url, type = "GET", body = "", headers = []) {

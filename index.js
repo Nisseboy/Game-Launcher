@@ -25,9 +25,9 @@ function createWindow() {
     title: "Nolshub",
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-        color: '#ffffff03',
+        color: '#111111',
         symbolColor: '#fff',
-        height: 32
+        height: 20,
     },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
@@ -39,7 +39,6 @@ function createWindow() {
   window.removeMenu();
   
   window.loadFile("pages/home/index.html");
-//  window.webContents.openDevTools()
 
   ipcMain.handle('read-directory', async (event, directoryPath) => {
     try {
