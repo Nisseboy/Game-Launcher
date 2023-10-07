@@ -101,6 +101,15 @@ async function main() {
   drawGameCards();
 }
 
+function reload() {
+  gamesListElem.replaceChildren();
+  headerElem.replaceChildren();
+  start();
+}
+document.addEventListener("keydown", e => {
+  if (e.key == "F5" || (e.ctrlKey && e.key == "r")) reload();
+});
+
 async function readGames(dir) {
   games = [];
   for (let i in dir) {
