@@ -1,10 +1,16 @@
+//Multi select
+//Steam support
+//Refresh button
 const gamesListElem = document.getElementsByClassName("games-list")[0];
 const headerElem = document.getElementsByClassName("header")[0];
 const searchElem = document.getElementsByClassName("search")[0];
 const resultsElem = document.getElementsByClassName("number-of-results")[0];
 
-let auth;
+let IGDBAuth;
 let IGDBGames;
+
+let steamAuth = "0C28F1769854654DF2A7ABFA53CB3472";
+let steamGames;
 
 let searched = [];
 
@@ -21,14 +27,17 @@ let favorites;
 
 start();
 async function start() {
-  auth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
+  document.getElementsByClassName("version")[0].innerText = "v" + await electron.getVersion();
+
+  IGDBAuth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
+  //steamAuth = files.steamAuth(steamAuth);
   settings = files.loadJSON("settings");
   removedGames = files.loadJSON("removed-games");
   ids = files.loadJSON("ids");
   favorites = files.loadJSON("favorites");
   
-  [auth, settings, removedGames, ids, favorites] = await Promise.all([auth, settings, removedGames, ids, favorites]);
-  auth = auth["access_token"];
+  [IGDBAuth, settings, removedGames, ids, favorites, steamAuth] = await Promise.all([IGDBAuth, settings, removedGames, ids, favorites, steamAuth]);
+  IGDBAuth = IGDBAuth["access_token"];
   
   settings = settings.a != 123? settings : defaultSettings;
   removedGames = (removedGames.a != 123 && removedGames.v == 1)? removedGames : {v: 1, games: []};
@@ -334,7 +343,7 @@ async function IGDBreq(url, type = "GET", body = "") {
         return;
       }
       IGDBReqQueue.splice(IGDBReqQueue.indexOf(body), 1);
-      let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + auth});
+      let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + IGDBAuth});
       resolve(res);
     }, Math.max(IGDBNextReq - time, 0));
 

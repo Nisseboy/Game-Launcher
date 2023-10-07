@@ -3,6 +3,11 @@ const fs = require('fs').promises;
 const path = require('node:path');
 const Fuse = require('fuse.js');
 
+if (!process.defaultApp) {
+  require('update-electron-app')();
+}
+//const SteamAuth = require('node-steam-openid');
+
 if (handleSquirrelEvent()) {
   return;
 }
@@ -30,13 +35,17 @@ function createWindow() {
         height: 20,
     },
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
     },
     show: false,
     sandbox: false,
   });
   window.maximize();
   window.removeMenu();
+
+  if (process.defaultApp) {
+    window.openDevTools();
+  }
   
   window.loadFile("pages/home/index.html");
 
@@ -71,6 +80,10 @@ function createWindow() {
     return app.getPath('userData');
   });
 
+  ipcMain.handle('get-version', (event) => {
+    return app.getVersion();
+  });
+
   ipcMain.handle('open-file', (event, path) => {
     shell.openExternal(path);
   });
@@ -97,6 +110,16 @@ function createWindow() {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  /*ipcMain.handle('steam-auth', async (event, id) => {
+    const steam = new SteamAuth({
+      realm: "Nolshub",
+      returnUrl: "",
+      apiKey: ""
+    });
+    let auth = await SteamAuth
+    return auth;
+  });*/
 }
 
 

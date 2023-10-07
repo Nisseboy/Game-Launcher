@@ -1,5 +1,6 @@
 body {
   background: var(--bg);
+  overflow-y: scroll;
 }
 
 .titlebar {
@@ -60,9 +61,13 @@ body {
   place-items: center;
   z-index: 100;
 }
-.reset-path {
-  position: fixed;
+.left-footer {
+  position: absolute;
   left: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+.reset-path {
   border: 1px solid gray;
   background: none;
   border-radius: 0.3rem;
@@ -73,6 +78,9 @@ body {
 .reset-path:hover {
   background: var(--warning-bg);
   color: white;
+}
+.version {
+  color: gray;
 }
 .search {
   border: 1px solid gray;

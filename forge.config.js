@@ -27,4 +27,15 @@ module.exports = {
       config: {},
     },
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'Nisseboy',
+          name: 'Game-Launcher'
+        },
+      }
+    }
+  ],
 };

@@ -10,13 +10,16 @@ contextBridge.exposeInMainWorld('files', {
   saveJSON,
   selectDirs,
 
-  openFile
+  openFile,
+
+  steamAuth,
 });
 contextBridge.exposeInMainWorld('search', {
   fuzzy: search
 });
 contextBridge.exposeInMainWorld('electron', {
-  openDevTools
+  openDevTools,
+  getVersion,
 });
 
 async function getFiles (path) {
@@ -63,6 +66,9 @@ async function openFile(path) {
 function openDevTools() {
   ipcRenderer.invoke('open-dev-tools');
 }
+function getVersion() {
+  return ipcRenderer.invoke('get-version');
+}
 
 async function selectDirs() {
   let res = await ipcRenderer.invoke('select-dirs');
@@ -72,4 +78,8 @@ async function selectDirs() {
 async function search(list, query) {
   let res = await ipcRenderer.invoke('search', JSON.stringify(list), query);
   return res;
+}
+
+function steamAuth(id) {
+  return ipcRenderer.invoke('steam-auth', id);
 }
