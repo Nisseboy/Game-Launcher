@@ -11,10 +11,7 @@
   },
   "author": "Nisseboy",
   "license": "ISC",
-  "repository": {
-    "owner": "Nisseboy",
-    "name": "Game-Launcher"
-  },
+  "repository": "https://github.com/Nisseboy/Game-Launcher",
   "devDependencies": {
     "@electron-forge/cli": "^6.4.2",
     "@electron-forge/maker-deb": "^6.4.2",
