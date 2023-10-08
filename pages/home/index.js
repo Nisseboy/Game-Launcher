@@ -1,6 +1,7 @@
 //Multi select
 //Steam support
-//Refresh button
+//Add start game animation
+
 const gamesListElem = document.getElementsByClassName("games-list")[0];
 const headerElem = document.getElementsByClassName("header")[0];
 const searchElem = document.getElementsByClassName("search")[0];
@@ -79,6 +80,12 @@ async function main() {
   let neededIDs = games.filter(e=>e.id == undefined);
   if (neededIDs.length > 0)
     await getIDs(neededIDs);
+
+  games.filter(e=>e.id == undefined).forEach(game=>{
+    game.id = 8675309;
+    ids[game.name] = 8675309;
+  });
+  files.saveJSON("ids", ids);
 
   IGDBGames = await getGames();
 
@@ -397,7 +404,6 @@ async function getIDs(games) {
     e.id = res.find(ee=>e.name == ee.name)?.id;
     ids[e.name] = e.id;
   });
-  files.saveJSON("ids", ids);
 }
 
 function createElem(text, parent = document.body) {
