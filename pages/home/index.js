@@ -25,6 +25,7 @@ let settings;
 let removedGames;
 let ids;
 let favorites;
+let cache;
 
 start();
 async function start() {
@@ -35,16 +36,17 @@ async function start() {
   removedGames = files.loadJSON("removed-games");
   ids = files.loadJSON("ids");
   favorites = files.loadJSON("favorites");
-  IGDBAuth = files.loadJSON("auth");
+  cache = files.loadJSON("cache");
   
-  [settings, removedGames, ids, favorites, IGDBAuth, steamAuth] = await Promise.all([settings, removedGames, ids, favorites, IGDBAuth, steamAuth]);
+  [settings, removedGames, ids, favorites, cache, steamAuth] = await Promise.all([settings, removedGames, ids, favorites, cache, steamAuth]);
   
   settings = settings.a != 123? settings : defaultSettings;
   removedGames = (removedGames.a != 123 && removedGames.v == 1)? removedGames : {v: 1, games: []};
   ids = ids.a != 123? ids : {};
   favorites = (favorites.a != 123 && favorites.v == 1)? favorites : {v: 1, games: []};
-  IGDBAuth = IGDBAuth.a != 123? IGDBAuth : {expires: 0};
+  cache = cache.a != 123? cache : {igdb: {expires: 0}};
   
+  IGDBAuth = cache.igdb;
   let timeLeft =  IGDBAuth.expires - new Date().getTime();
   if (timeLeft < 0) {
     await getNewAuth();
@@ -57,9 +59,10 @@ async function start() {
 }
 
 async function getNewAuth() {
-  IGDBAuth = await req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
+  IGDBAuth = await IGDBreq("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST", "");
   IGDBAuth.expires = new Date().getTime() + IGDBAuth["expires_in"] * 1000;
-  files.saveJSON("auth", IGDBAuth);
+  cache.igdb = IGDBAuth;
+  files.saveJSON("cache", cache);
 }
 
 async function main() {
@@ -89,7 +92,7 @@ async function main() {
     return;
   }
 
-  await readGames(dir);
+  readGames(dir);
   
   let neededIDs = games.filter(e=>e.id == undefined);
   if (neededIDs.length > 0)
@@ -101,7 +104,7 @@ async function main() {
   });
   files.saveJSON("ids", ids);
 
-  IGDBGames = await getGames();
+  await getGames();
 
   let createdGenres = {};
   createElem(`
@@ -131,7 +134,7 @@ document.addEventListener("keydown", e => {
   if (e.key == "F5" || (e.ctrlKey && e.key == "r")) reload();
 });
 
-async function readGames(dir) {
+function readGames(dir) {
   games = [];
   for (let i in dir) {
     let file = dir[i];
@@ -196,7 +199,7 @@ async function cardOptionClick(e) {
   game.id = e.dataset.new;
   becomeSpinner(game.elem);
 
-  res = await IGDBreq("games", "POST", `
+  res = await IGDBreq("https://api.igdb.com/v4/games", "POST", `
     fields id,cover.image_id,genres.name,name,summary,url,videos.video_id,first_release_date;
     where id = ${game.id};
     limit 1;
@@ -328,7 +331,7 @@ async function drawGameCard(game) {
     });
   } else {
     becomeSpinner(game.elem);
-    let possibleGames = await IGDBreq("games", "POST", `
+    let possibleGames = await IGDBreq("https://api.igdb.com/v4/games", "POST", `
       search "${game.name}";
       fields id,name,cover.image_id;
       limit 8;
@@ -362,9 +365,9 @@ async function drawGameCard(game) {
 let IGDBReqQueue = [];
 let IGDBNextReq = new Date().getTime();
 let IGDBCache = {};
-async function IGDBreq(url, type = "GET", body = "") {
+async function IGDBreq(url, type, body) {
   return new Promise((resolve, reject) => {
-    if (IGDBCache[body] != undefined) {
+    if (IGDBCache[body] != undefined && body != "") {
       resolve(IGDBCache[body]);
       return;
     }
@@ -378,7 +381,7 @@ async function IGDBreq(url, type = "GET", body = "") {
         return;
       }
       IGDBReqQueue.splice(IGDBReqQueue.indexOf(body), 1);
-      let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + IGDBAuth["access_token"]});
+      let res = await req(url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + IGDBAuth["access_token"]});
       IGDBCache[body] = res;
       resolve(res);
     }, Math.max(IGDBNextReq - time, 0));
@@ -405,15 +408,31 @@ async function req(url, type = "GET", body = "", headers = []) {
 }
 
 async function getGames() {
-  return await IGDBreq("games", "POST", `
+  let wait = true;
+  let id = games.filter(e=>e.id).map(e=>e.id).join("|");
+  if (cache.games?.id == id) {
+    wait = false;
+    IGDBGames = cache.games.games;
+  }
+  
+  let res = IGDBreq("https://api.igdb.com/v4/games", "POST", `
     sort id asc;
     fields id,cover.image_id,genres.name,name,summary,url,videos.video_id,first_release_date;
     where ${games.filter(e=>e.id).map((e, i) => `${i!=0?" | ":""}id = ${e.id}`).join("")};
     limit ${games.length};
-  `);
+  `).then(res => {
+    cache.games = {id: id, games: res};
+    files.saveJSON("cache", cache);
+
+    if (wait) IGDBGames = res;
+  });
+
+  if (wait) {
+    await res;
+  }
 }
 async function getIDs(games) {
-  let res = await IGDBreq("games", "POST", `
+  let res = await IGDBreq("https://api.igdb.com/v4/games", "POST", `
     sort id asc;
     fields id,name;
     where ${games.map((e, i) => `${i!=0?" | ":""}name = "${e.name}"`).join("")};
