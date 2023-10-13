@@ -1,7 +1,7 @@
 {
   "name": "nolshub",
-  "version": "1.0.8",
-  "description": "A simple program to display games.",
+  "version": "1.0.9",
+  "description": "A program to display games.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

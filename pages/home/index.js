@@ -30,22 +30,36 @@ start();
 async function start() {
   document.getElementsByClassName("version")[0].innerText = "v" + await electron.getVersion();
 
-  IGDBAuth = req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
   //steamAuth = files.steamAuth(steamAuth);
   settings = files.loadJSON("settings");
   removedGames = files.loadJSON("removed-games");
   ids = files.loadJSON("ids");
   favorites = files.loadJSON("favorites");
+  IGDBAuth = files.loadJSON("auth");
   
-  [IGDBAuth, settings, removedGames, ids, favorites, steamAuth] = await Promise.all([IGDBAuth, settings, removedGames, ids, favorites, steamAuth]);
-  IGDBAuth = IGDBAuth["access_token"];
+  [settings, removedGames, ids, favorites, IGDBAuth, steamAuth] = await Promise.all([settings, removedGames, ids, favorites, IGDBAuth, steamAuth]);
   
   settings = settings.a != 123? settings : defaultSettings;
   removedGames = (removedGames.a != 123 && removedGames.v == 1)? removedGames : {v: 1, games: []};
   ids = ids.a != 123? ids : {};
   favorites = (favorites.a != 123 && favorites.v == 1)? favorites : {v: 1, games: []};
+  IGDBAuth = IGDBAuth.a != 123? IGDBAuth : {expires: 0};
+  
+  let timeLeft =  IGDBAuth.expires - new Date().getTime();
+  if (timeLeft < 0) {
+    await getNewAuth();
+  }
+  else if (timeLeft < 400000000) { //4.6 days
+    getNewAuth();
+  }
   
   main();
+}
+
+async function getNewAuth() {
+  IGDBAuth = await req("https://id.twitch.tv/oauth2/token?client_id=vuis5sdu5hhavo74a4xu3jc1v8gojs&client_secret=nfvhlpqfhdmaqu39knodo1l52wba2o&grant_type=client_credentials", "POST");
+  IGDBAuth.expires = new Date().getTime() + IGDBAuth["expires_in"] * 1000;
+  files.saveJSON("auth", IGDBAuth);
 }
 
 async function main() {
@@ -347,8 +361,13 @@ async function drawGameCard(game) {
 
 let IGDBReqQueue = [];
 let IGDBNextReq = new Date().getTime();
+let IGDBCache = {};
 async function IGDBreq(url, type = "GET", body = "") {
   return new Promise((resolve, reject) => {
+    if (IGDBCache[body] != undefined) {
+      resolve(IGDBCache[body]);
+      return;
+    }
     IGDBReqQueue.push(body);
 
     let time = new Date().getTime();
@@ -359,7 +378,8 @@ async function IGDBreq(url, type = "GET", body = "") {
         return;
       }
       IGDBReqQueue.splice(IGDBReqQueue.indexOf(body), 1);
-      let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + IGDBAuth});
+      let res = await req("https://api.igdb.com/v4/" + url, type, body, {"Client-ID": "vuis5sdu5hhavo74a4xu3jc1v8gojs", "Authorization": "Bearer " + IGDBAuth["access_token"]});
+      IGDBCache[body] = res;
       resolve(res);
     }, Math.max(IGDBNextReq - time, 0));
 
