@@ -150,7 +150,7 @@ body {
 .game:not(:has(>img)) > .game-overlay {
   opacity: 1;
 }
-.game-overlay > .name {
+.name {
   width: 75%;
 }
 .date {
@@ -219,9 +219,10 @@ body {
   color: var(--check-bg);
 }
 
-.which-version {
-  color: lightgray;
-  width: 100%;
+.name.question {
+  outline: 1px solid gray;
+  padding: 0.1rem;
+  text-align: left;
 }
 .possible-games {
   display: grid;

@@ -325,23 +325,22 @@ async function drawGameCard(game) {
     </div>
     `, game.elem);
 
-    elem.getElementsByClassName("swap-game")[0].addEventListener("click", async e => {
+    elem.getElementsByClassName("swap-game")[0].addEventListener("click", e => {
       game.id = undefined;
-      await drawGameCard(game);
+      drawGameCard(game);
     });
   } else {
     becomeSpinner(game.elem);
     let possibleGames = await IGDBreq("https://api.igdb.com/v4/games", "POST", `
-      search "${game.name}";
+      search "${game.alternateName || game.name}";
       fields id,name,cover.image_id;
       limit 8;
     `);
     decomeSpinner(game.elem);
     
-    createElem(`
+    let elem = createElem(`
     <div class="game-overlay">
-      <div class="name">${game.name}</div>
-      <div class="which-version">Which version do you have?</div>
+      <div class="name question" contentEditable="true">${game.alternateName || game.name}</div>
       <div class="possible-games">${
         possibleGames.map(e=>{
           return `
@@ -357,6 +356,14 @@ async function drawGameCard(game) {
       ${favoriteButton}
     </div>
     `, game.elem);
+
+    elem.getElementsByClassName("question")[0].addEventListener("keypress", e => {
+      if (e.key == "Enter") {
+        e.preventDefault();
+        game.alternateName = e.target.innerText;
+        drawGameCard(game);
+      } 
+    });
   }
 
   return game.elem;
