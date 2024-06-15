@@ -1,6 +1,7 @@
 //Multi select
 //Steam support
-//Add start game animation
+//Add sorting, name, year, rating, recently played etc
+//Genre bar in windows thing
 
 const gamesListElem = document.getElementsByClassName("games-list")[0];
 const headerElem = document.getElementsByClassName("header")[0];

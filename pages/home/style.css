@@ -157,7 +157,7 @@ body {
   color: lightgray;
   font-size: 0.9rem;
 }
-.game-overlay > button {
+.play {
   padding: 0.35rem 4rem;
   border: none;
   border-radius: 0.1rem;
@@ -168,12 +168,29 @@ body {
   cursor: pointer;
   transition-duration: 0.2s;
 }
-.game-overlay > button:hover {
+.play:hover {
   filter: brightness(1.2);
 }
-.desc {
-  overflow-y: auto;
+.play:active {
+  bottom: 0.9rem;
 }
+
+.desc {
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+.desc:hover {
+  animation: desc-hover 0.4s forwards;
+}
+@keyframes desc-hover {
+  0%, 99% {
+    overflow-y:hidden;
+  }
+  100% {
+    overflow-y: auto;
+  }
+}
+
 .game-overlay .swap-game,
 .game-overlay .open-link,
 .game-overlay .remove-game,
